@@ -37,6 +37,10 @@ app.get("/db-test", async (req, res) => {
       success: false,
       error: "DB connection failed"
     });
+    console.log("DB connection failed:", err.message);
+    console.log("HOST:", process.env.DB_HOST);
+    console.log("USER:", process.env.DB_USER);
+    console.log("NAME:", process.env.DB_NAME);
   }
 });
 
@@ -44,3 +48,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
+
