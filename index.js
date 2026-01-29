@@ -1,21 +1,20 @@
 const express = require("express");
 const cors = require("cors");
-const mysql = require("mysql2/promise");
+const { Pool } = require("pg");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// MySQL pool (uses env vars — DO NOT hardcode)
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 5,
-  queueLimit: 0
+// Postgres pool (uses Render env vars)
+const pool = new Pool({
+  host: process.env.PGHOST,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
+  port: process.env.PGPORT,
+  ssl: { rejectUnauthorized: false } // required on Render
 });
 
 // Health check
@@ -26,21 +25,14 @@ app.get("/", (req, res) => {
 // 🔍 DB connection test
 app.get("/db-test", async (req, res) => {
   try {
-    const conn = await pool.getConnection();
-    await conn.ping();
-    conn.release();
+    const client = await pool.connect();
+    await client.query("SELECT 1");
+    client.release();
 
-    res.json({ success: true, message: "DB connected" });
+    res.json({ success: true, message: "PostgreSQL connected" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      error: "DB connection failed"
-    });
-    console.log("DB connection failed:", err.message);
-    console.log("HOST:", process.env.DB_HOST);
-    console.log("USER:", process.env.DB_USER);
-    console.log("NAME:", process.env.DB_NAME);
+    console.error("DB ERROR:", err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -48,4 +40,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
-
